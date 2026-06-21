@@ -7,7 +7,15 @@
 # Inherit from those products. Most specific first.
 $(call inherit-product, $(SRC_TARGET_DIR)/product/core_64_bit.mk)
 TARGET_SUPPORTS_OMX_SERVICE := false
+# WiFi-only devices (e.g. liuqin) set TARGET_HAS_NO_TELEPHONY := true before
+# inheriting this makefile to drop the telephony stack. On modem-less hardware
+# the telephony base otherwise leaves the persistent com.android.phone process
+# crash-looping against an absent RIL (battery drain) and shows phantom SIM UI.
+ifeq ($(TARGET_HAS_NO_TELEPHONY),true)
+$(call inherit-product, $(SRC_TARGET_DIR)/product/full_base.mk)
+else
 $(call inherit-product, $(SRC_TARGET_DIR)/product/full_base_telephony.mk)
+endif
 
 # Add common definitions for Qualcomm
 $(call inherit-product, hardware/qcom-caf/common/common.mk)
@@ -162,10 +170,16 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/rootdir/etc/charger_fw_fstab.qti:$(TARGET_COPY_OUT_VENDOR)/etc/charger_fw_fstab.qti
 
+# A device tree may override the fstab before inheriting this makefile (e.g.
+# liuqin ships a dual ext4+erofs fstab). Default to the common ext4 fstab.
+ifeq ($(TARGET_DEVICE_FSTAB),)
+TARGET_DEVICE_FSTAB := $(LOCAL_PATH)/rootdir/etc/fstab.qcom
+endif
+
 PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/rootdir/etc/fstab.qcom:$(TARGET_COPY_OUT_VENDOR)/etc/fstab.qcom \
-    $(LOCAL_PATH)/rootdir/etc/fstab.qcom:$(TARGET_COPY_OUT_RECOVERY)/root/first_stage_ramdisk/fstab.qcom \
-    $(LOCAL_PATH)/rootdir/etc/fstab.qcom:$(TARGET_COPY_OUT_VENDOR_RAMDISK)/first_stage_ramdisk/fstab.qcom
+    $(TARGET_DEVICE_FSTAB):$(TARGET_COPY_OUT_VENDOR)/etc/fstab.qcom \
+    $(TARGET_DEVICE_FSTAB):$(TARGET_COPY_OUT_RECOVERY)/root/first_stage_ramdisk/fstab.qcom \
+    $(TARGET_DEVICE_FSTAB):$(TARGET_COPY_OUT_VENDOR_RAMDISK)/first_stage_ramdisk/fstab.qcom
 
 # GPS
 PRODUCT_PACKAGES += \
@@ -365,6 +379,7 @@ PRODUCT_SOONG_NAMESPACES += \
     hardware/xiaomi
 
 # Telephony
+ifneq ($(TARGET_HAS_NO_TELEPHONY),true)
 PRODUCT_PACKAGES += \
     extphonelib \
     extphonelib-product \
@@ -395,6 +410,7 @@ PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.hardware.telephony.gsm.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.telephony.gsm.xml \
     frameworks/native/data/etc/android.hardware.telephony.ims.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.telephony.ims.xml \
     frameworks/native/data/etc/android.software.sip.voip.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.software.sip.voip.xml
+endif
 
 # Thermal
 PRODUCT_PACKAGES += \
