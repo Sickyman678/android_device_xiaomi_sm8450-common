@@ -356,8 +356,16 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     sensors.xiaomi.v2:64
 
+# sensor-notifier spins on this panel: it reads malformed (size-0) display
+# events from the display-feature char dev (a phone-vs-tablet mismatch on
+# liuqin), pegging a full CPU core and flooding logd. Exclude it on liuqin.
+# NOTE: a $(filter-out ...) in the liuqin device tree can't drop this - Android
+# product config is strictly additive across inherit-product, so a package added
+# by an inherited makefile can only be removed at its source (here).
+ifneq ($(TARGET_PRODUCT),lineage_liuqin)
 PRODUCT_PACKAGES += \
     sensor-notifier
+endif
 
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/sensors/hals.conf:$(TARGET_COPY_OUT_ODM)/etc/sensors/hals.conf
@@ -481,8 +489,14 @@ PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.software.verified_boot.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.software.verified_boot.xml
 
 # Vibrator
+# liuqin has no vibration motor, but this HAL registers vibratorIds=[0] so
+# Vibrator.hasVibrator() returns true (phantom haptics in Settings). Exclude it
+# on liuqin. (Same additive-product-config constraint as sensor-notifier above -
+# must be dropped at the source, not via filter-out in the device tree.)
+ifneq ($(TARGET_PRODUCT),lineage_liuqin)
 PRODUCT_PACKAGES += \
     vendor.qti.hardware.vibrator.service
+endif
 
 PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/vibrator/excluded-input-devices.xml:$(TARGET_COPY_OUT_VENDOR)/etc/excluded-input-devices.xml
