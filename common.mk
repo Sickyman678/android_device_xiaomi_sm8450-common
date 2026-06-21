@@ -36,16 +36,29 @@ $(call inherit-product, frameworks/native/build/phone-xhdpi-6144-dalvik-heap.mk)
 $(call inherit-product, vendor/xiaomi/sm8450-common/sm8450-common-vendor.mk)
 
 # A/B
+# The FILESYSTEM_TYPE_* here is baked into the OTA payload metadata and is the
+# fs type update_engine uses to mount each partition at /postinstall before
+# running its postinstall script. It MUST match the actual image fs type or the
+# mount fails with EINVAL (kPostInstallMountError) and the slot never switches.
+# sm8450-common ships ext4 images; liuqin overrides system/vendor (etc.) to erofs
+# in device/xiaomi/liuqin/BoardConfig.mk, so liuqin must declare erofs here too
+# (proven combo: device/google/cuttlefish uses erofs + otapreopt_script).
+ifeq ($(TARGET_PRODUCT),lineage_liuqin)
+liuqin_postinstall_fs_type := erofs
+else
+liuqin_postinstall_fs_type := ext4
+endif
+
 AB_OTA_POSTINSTALL_CONFIG += \
     RUN_POSTINSTALL_system=true \
     POSTINSTALL_PATH_system=system/bin/otapreopt_script \
-    FILESYSTEM_TYPE_system=ext4 \
+    FILESYSTEM_TYPE_system=$(liuqin_postinstall_fs_type) \
     POSTINSTALL_OPTIONAL_system=true
 
 AB_OTA_POSTINSTALL_CONFIG += \
     RUN_POSTINSTALL_vendor=true \
     POSTINSTALL_PATH_vendor=bin/checkpoint_gc \
-    FILESYSTEM_TYPE_vendor=ext4 \
+    FILESYSTEM_TYPE_vendor=$(liuqin_postinstall_fs_type) \
     POSTINSTALL_OPTIONAL_vendor=true
 
 PRODUCT_PACKAGES += \
