@@ -87,6 +87,15 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     audioadsprpcd
 
+# Android 17 moved the platform audio stack to android.media.audio.common.types
+# V5, but the prebuilt WFD blobs (libwfdservice.so and friends) still carry
+# android.media.audio.common.types-V4-cpp.so in their DT_NEEDED. The V4
+# interface is still frozen and buildable, so install it explicitly here:
+# depending on it from the blob's shared_libs instead would make Soong reject
+# the module for pulling two versions of the same aidl_interface.
+PRODUCT_PACKAGES += \
+    android.media.audio.common.types-V4-cpp
+
 PRODUCT_PACKAGES += \
     lib_bt_aptx \
     lib_bt_ble \
